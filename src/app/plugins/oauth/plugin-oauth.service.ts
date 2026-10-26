@@ -5,6 +5,10 @@ import { OAuthFlowConfig, OAuthTokenResult } from '@super-productivity/plugin-ap
 import { generateCodeChallenge, generateCodeVerifier } from '@sp/sync-providers/pkce';
 import { PluginOAuthTokens } from './plugin-oauth.model';
 import { IS_ELECTRON } from '../../app.constants';
+import {
+  IS_FLOW_OS_HOST,
+  flowOsHostOAuthPrepare,
+} from '../../core/flow-os-host/flow-os-host';
 import { IS_NATIVE_PLATFORM, IS_ANDROID_NATIVE } from '../../util/is-native-platform';
 import { PluginLog } from '../../core/log';
 import {
@@ -93,6 +97,11 @@ export class PluginOAuthService {
     if (IS_ELECTRON) {
       const loopbackPort = redirectUri ? Number(new URL(redirectUri).port) : undefined;
       const { port } = await window.ea.pluginOAuthPrepare(loopbackPort);
+      return redirectUri || `http://127.0.0.1:${port}`;
+    }
+    if (IS_FLOW_OS_HOST) {
+      const loopbackPort = redirectUri ? Number(new URL(redirectUri).port) : undefined;
+      const { port } = await flowOsHostOAuthPrepare(loopbackPort);
       return redirectUri || `http://127.0.0.1:${port}`;
     }
     if (redirectUri) {

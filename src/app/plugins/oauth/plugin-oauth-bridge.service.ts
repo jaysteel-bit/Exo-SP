@@ -12,6 +12,11 @@ import {
 } from './plugin-oauth-token-store';
 import { IS_ELECTRON } from '../../app.constants';
 import {
+  IS_FLOW_OS_HOST,
+  flowOsHostOAuthStart,
+  flowOsHostOAuthWait,
+} from '../../core/flow-os-host/flow-os-host';
+import {
   IS_NATIVE_PLATFORM,
   IS_IOS_NATIVE,
   IS_ANDROID_NATIVE,
@@ -59,7 +64,9 @@ export class PluginOAuthBridgeService {
     // pure, platform-parameterized util so every branch is unit-testable (the IS_*
     // consts are module-level and cannot be mocked in karma).
     const effectiveConfig = resolveEffectiveOAuthConfig(config, {
-      isElectron: IS_ELECTRON,
+      // The Flow OS host supplies the loopback + system browser, so it takes the
+      // desktop client exactly like Electron does.
+      isElectron: IS_ELECTRON || IS_FLOW_OS_HOST,
       isNative: IS_NATIVE_PLATFORM,
       isAndroid: IS_ANDROID_NATIVE,
       isIos: IS_IOS_NATIVE,
@@ -178,12 +185,36 @@ export class PluginOAuthBridgeService {
   }
 
   private _isUnavailableInWeb(config?: OAuthFlowConfig): boolean {
-    return !!config && !IS_ELECTRON && !IS_NATIVE_PLATFORM && !config.webClientId;
+    return (
+      !!config &&
+      !IS_ELECTRON &&
+      !IS_FLOW_OS_HOST &&
+      !IS_NATIVE_PLATFORM &&
+      !config.webClientId
+    );
   }
 
   private _openOAuthWindow(url: string): void {
     if (IS_ELECTRON) {
       window.ea.pluginOAuthStart(url);
+    } else if (IS_FLOW_OS_HOST) {
+      // The host has no push channel into the page, so the redirect result is
+      // long-polled and handed to the same entry points Electron's IPC uses.
+      flowOsHostOAuthStart(url)
+        .then(() => flowOsHostOAuthWait())
+        .then((result) => {
+          if (result.code) {
+            this._pluginOAuthService.handleRedirectCode(result.code, result.state);
+          } else {
+            this._pluginOAuthService.handleRedirectError(
+              result.error || 'cancelled',
+              result.state,
+            );
+          }
+        })
+        .catch((error) =>
+          this._pluginOAuthService.handleRedirectError(String(error?.message || error)),
+        );
     } else if (IS_NATIVE_PLATFORM) {
       // On mobile, Google blocks OAuth in embedded WebViews (Error 400: invalid_request).
       // Use Capacitor Browser to open the system browser instead.

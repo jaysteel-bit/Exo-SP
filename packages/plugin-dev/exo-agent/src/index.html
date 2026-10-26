@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>Exo AI</title>
+  </head>
+  <body>
+    <div class="app">
+      <header class="top">
+        <h2>Exo AI</h2>
+        <span
+          id="conn-pill"
+          class="pill"
+          >…</span
+        >
+        <button
+          id="refresh-btn"
+          class="btn-outline small"
+          type="button"
+          title="Refresh"
+        >
+          Refresh
+        </button>
+      </header>
+
+      <section>
+        <h3>Today's plan</h3>
+        <div id="plan-body"><p class="text-muted">Loading…</p></div>
+        <div class="plan-controls">
+          <label for="available-minutes">Available minutes</label>
+          <input
+            id="available-minutes"
+            type="number"
+            min="1"
+            max="1440"
+            step="15"
+            value="360"
+          />
+          <button
+            id="plan-btn"
+            class="btn-primary"
+            type="button"
+            disabled
+          >
+            Ask Exo AI to plan my day
+          </button>
+        </div>
+        <p
+          id="today-count"
+          class="text-muted small"
+        ></p>
+        <p
+          id="plan-status"
+          class="status"
+          aria-live="polite"
+        ></p>
+      </section>
+
+      <section>
+        <h3>Estimate drift</h3>
+        <div id="drift-body"></div>
+      </section>
+
+      <section>
+        <h3>Handed-off work</h3>
+        <div id="handoffs-body"></div>
+      </section>
+
+      <details class="config">
+        <summary>Flow OS connection</summary>
+        <p
+          id="config-source"
+          class="text-muted small"
+        ></p>
+        <label for="cfg-url">Supabase URL</label>
+        <input
+          id="cfg-url"
+          type="url"
+          placeholder="https://…supabase.co"
+          autocomplete="off"
+        />
+        <label for="cfg-key">Anon key</label>
+        <input
+          id="cfg-key"
+          type="password"
+          placeholder="anon key"
+          autocomplete="off"
+        />
+        <p
+          id="config-host"
+          class="text-muted small"
+        ></p>
+        <div class="row-buttons">
+          <button
+            id="cfg-save"
+            class="btn-outline"
+            type="button"
+          >
+            Save
+          </button>
+          <button
+            id="cfg-clear"
+            class="btn-outline"
+            type="button"
+          >
+            Clear saved connection
+          </button>
+        </div>
+        <p
+          id="cfg-status"
+          class="status"
+          aria-live="polite"
+        ></p>
+      </details>
+    </div>
+    <script
+      type="module"
+      src="./panel/main.ts"
+    ></script>
+  </body>
+</html>

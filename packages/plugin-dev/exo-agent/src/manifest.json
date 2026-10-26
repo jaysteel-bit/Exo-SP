@@ -1,0 +1,16 @@
+{
+  "name": "Exo AI",
+  "id": "exo-agent",
+  "manifestVersion": 1,
+  "version": "1.0.0",
+  "minSupVersion": "19.2.0",
+  "description": "Sends completed tasks, tracking stints, focus sessions and finished days to Flow OS memory, adds a \"Send to Exo AI\" task menu entry, and shows Exo AI's day plan, estimate drift and handed-off work in a side panel.",
+  "author": "Exo Enterprise",
+  "hooks": ["taskComplete", "currentTaskChange", "finishDay", "action"],
+  "permissions": ["http", "showSnack", "showIndexHtmlAsView"],
+  "allowedHosts": ["jdjyiyeddpfzpgrqffav.supabase.co"],
+  "iFrame": true,
+  "sidePanel": true,
+  "isSkipMenuEntry": true,
+  "icon": "icon.svg"
+}

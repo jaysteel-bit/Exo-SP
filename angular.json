@@ -106,6 +106,10 @@
               "extractLicenses": true,
               "serviceWorker": "ngsw-config.json"
             },
+            "flowOs": {
+              "serviceWorker": false,
+              "sourceMap": false
+            },
             "productionWeb": {
               "outputPath": {
                 "base": "dist",

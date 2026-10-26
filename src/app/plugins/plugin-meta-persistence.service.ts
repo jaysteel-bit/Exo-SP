@@ -4,6 +4,10 @@ import { firstValueFrom } from 'rxjs';
 import { PluginMetadata } from './plugin-persistence.model';
 import { upsertPluginMetadata, deletePluginMetadata } from './store/plugin.actions';
 import { selectPluginMetadataFeatureState } from './store/plugin-metadata.reducer';
+import {
+  FLOW_OS_DEFAULT_ENABLED_PLUGINS,
+  IS_FLOW_OS_HOST,
+} from '../core/flow-os-host/flow-os-host';
 
 /**
  * Service for persisting plugin metadata using NgRx actions.
@@ -34,8 +38,12 @@ export class PluginMetaPersistenceService {
     const pluginMetadata = currentState.find((item) => item.id === pluginId);
 
     // Default to false for all plugins that haven't been explicitly enabled
-    // This ensures plugins start disabled and must be manually enabled by the user
-    return pluginMetadata?.isEnabled ?? false;
+    // This ensures plugins start disabled and must be manually enabled by the user.
+    // Flow OS fork: inside Flowstate, Exo AI and Google Calendar default to on;
+    // once the user toggles one, its metadata decides.
+    const isFlowOsDefault =
+      IS_FLOW_OS_HOST && FLOW_OS_DEFAULT_ENABLED_PLUGINS.has(pluginId);
+    return pluginMetadata?.isEnabled ?? isFlowOsDefault;
   }
 
   /**
