@@ -51,6 +51,10 @@ import { DialogConfirmComponent } from '../../../ui/dialog-confirm/dialog-confir
 import { T } from '../../../t.const';
 import { DateService } from '../../../core/date/date.service';
 import { ipcIdleTime$ } from '../../../core/ipc-events';
+import {
+  flowOsHostIdleTime$,
+  IS_FLOW_OS_HOST,
+} from '../../../core/flow-os-host/flow-os-host';
 import { selectIsSessionRunning } from '../../focus-mode/store/focus-mode.selectors';
 import {
   completeFocusSession,
@@ -85,20 +89,22 @@ export class IdleEffects {
 
   private _triggerIdleApis$ = IS_ELECTRON
     ? ipcIdleTime$
-    : this._chromeExtensionInterfaceService.onReady$.pipe(
-        first(),
-        switchMap(() => {
-          return new Observable((subscriber) => {
-            this._chromeExtensionInterfaceService.addEventListener(
-              IPC.IDLE_TIME,
-              (ev: Event, data?: unknown) => {
-                const idleTimeInMs = Number(data);
-                subscriber.next(idleTimeInMs);
-              },
-            );
-          });
-        }),
-      );
+    : IS_FLOW_OS_HOST
+      ? flowOsHostIdleTime$
+      : this._chromeExtensionInterfaceService.onReady$.pipe(
+          first(),
+          switchMap(() => {
+            return new Observable((subscriber) => {
+              this._chromeExtensionInterfaceService.addEventListener(
+                IPC.IDLE_TIME,
+                (ev: Event, data?: unknown) => {
+                  const idleTimeInMs = Number(data);
+                  subscriber.next(idleTimeInMs);
+                },
+              );
+            });
+          }),
+        );
 
   // NOTE: Why we filter out triggers when already idle (fixes #5652):
   // When the idle dialog is open, two timers compete to update idleTime in the store:

@@ -9,9 +9,19 @@
  * clients (e.g. the bundled Google Calendar provider) work exactly as in Electron:
  * the desktop client id + secret, PKCE, and a `http://127.0.0.1:<port>` redirect.
  *
+ * It also has no system idle time (Electron reads it from powerMonitor), so the host
+ * answers `/__host/idle`, which feeds the idle dialog the same way IPC.IDLE_TIME does.
+ *
  * Every request carries the per-launch token the host injected, so another page or
  * local process cannot drive the host.
  */
+
+import { EMPTY, from, Observable, timer } from 'rxjs';
+import { catchError, exhaustMap, filter, map } from 'rxjs/operators';
+import {
+  IDLE_MIN_IDLE_TIME_MS,
+  IDLE_PING_INTERVAL_MS,
+} from '../../../../electron/shared-with-frontend/idle.const';
 
 interface FlowOsHostInfo {
   token: string;
@@ -77,3 +87,23 @@ export const flowOsHostOAuthStart = (url: string): Promise<{ ok: true }> =>
 /** Long-poll the loopback result: the redirect's code/state, or an error/timeout. */
 export const flowOsHostOAuthWait = (): Promise<FlowOsOAuthResult> =>
   callHost('oauth/wait');
+
+/**
+ * System idle time in the shape Electron's IDLE_TIME events have: polled every
+ * `intervalMs`, emitted only above `minIdleMs`. A failed poll is skipped, never fatal.
+ */
+export const hostIdleTime$ = (
+  readIdle: () => Promise<{ idleMs: number | null }>,
+  intervalMs: number = IDLE_PING_INTERVAL_MS,
+  minIdleMs: number = IDLE_MIN_IDLE_TIME_MS,
+): Observable<number> =>
+  timer(intervalMs, intervalMs).pipe(
+    exhaustMap(() => from(readIdle()).pipe(catchError(() => EMPTY))),
+    map((res) => res.idleMs),
+    filter((ms): ms is number => typeof ms === 'number' && ms > minIdleMs),
+  );
+
+/** Milliseconds since the last keyboard or mouse input on the machine (null if unknown). */
+export const flowOsHostIdleTime$: Observable<number> = hostIdleTime$(() =>
+  callHost<{ idleMs: number | null }>('idle'),
+);
