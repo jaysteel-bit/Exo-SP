@@ -58,6 +58,8 @@ import {
   unPauseFocusSession,
 } from '../../focus-mode/store/focus-mode.actions';
 import { Log } from '../../../core/log';
+import { IS_FLOW_OS_HOST } from '../../../core/flow-os-host/flow-os-host';
+import { flowOsHostIdleTime$ } from '../../../core/flow-os-host/flow-os-host-idle';
 
 const DEFAULT_MIN_IDLE_TIME = 60000;
 const IDLE_POLL_INTERVAL = 1000;
@@ -83,22 +85,25 @@ export class IdleEffects {
   // NOTE: needs to live forever since we can't unsubscribe from ipcEvent$
   private _isFocusSessionRunning$ = this._store.select(selectIsSessionRunning);
 
+  // Fork: inside Flowstate the Flow OS host stands in for Electron's idle loop.
   private _triggerIdleApis$ = IS_ELECTRON
     ? ipcIdleTime$
-    : this._chromeExtensionInterfaceService.onReady$.pipe(
-        first(),
-        switchMap(() => {
-          return new Observable((subscriber) => {
-            this._chromeExtensionInterfaceService.addEventListener(
-              IPC.IDLE_TIME,
-              (ev: Event, data?: unknown) => {
-                const idleTimeInMs = Number(data);
-                subscriber.next(idleTimeInMs);
-              },
-            );
-          });
-        }),
-      );
+    : IS_FLOW_OS_HOST
+      ? flowOsHostIdleTime$()
+      : this._chromeExtensionInterfaceService.onReady$.pipe(
+          first(),
+          switchMap(() => {
+            return new Observable((subscriber) => {
+              this._chromeExtensionInterfaceService.addEventListener(
+                IPC.IDLE_TIME,
+                (ev: Event, data?: unknown) => {
+                  const idleTimeInMs = Number(data);
+                  subscriber.next(idleTimeInMs);
+                },
+              );
+            });
+          }),
+        );
 
   // NOTE: Why we filter out triggers when already idle (fixes #5652):
   // When the idle dialog is open, two timers compete to update idleTime in the store:

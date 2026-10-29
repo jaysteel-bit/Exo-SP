@@ -6,6 +6,14 @@ import {
   IDLE_PING_INTERVAL_MS,
 } from '../../../../../electron/shared-with-frontend/idle.const';
 import { msToString } from '../../../ui/duration/ms-to-string.pipe';
+import { IS_FLOW_OS_HOST } from '../../../core/flow-os-host/flow-os-host';
+
+// Fork: inside Flowstate the Flow OS host supplies idle time (flow-os-host-idle.ts),
+// so the idle fields show and the extension note does not, without turning on
+// every other advanced-features switch (Jira still needs the extension there).
+const SHOWN_WITH_IDLE_SOURCE = IS_FLOW_OS_HOST
+  ? ''
+  : HelperClasses.isHideForNoAdvancedFeatures;
 
 export const IDLE_FORM_CFG: ConfigFormSection<IdleConfig> = {
   title: T.GCF.IDLE.TITLE,
@@ -13,18 +21,22 @@ export const IDLE_FORM_CFG: ConfigFormSection<IdleConfig> = {
   help: T.GCF.IDLE.HELP,
   isHideForAndroidApp: true,
   items: [
-    {
-      type: 'tpl',
-      className: `tpl ${HelperClasses.isHideForAdvancedFeatures}`,
-      templateOptions: {
-        tag: 'p',
-        class: 'sub-section-heading',
-        text: T.G.EXTENSION_INFO,
-      },
-    },
+    ...(IS_FLOW_OS_HOST
+      ? []
+      : [
+          {
+            type: 'tpl',
+            className: `tpl ${HelperClasses.isHideForAdvancedFeatures}`,
+            templateOptions: {
+              tag: 'p',
+              class: 'sub-section-heading',
+              text: T.G.EXTENSION_INFO,
+            },
+          },
+        ]),
     {
       key: 'isEnableIdleTimeTracking',
-      className: HelperClasses.isHideForNoAdvancedFeatures,
+      className: SHOWN_WITH_IDLE_SOURCE,
       type: 'checkbox',
       templateOptions: {
         label: T.GCF.IDLE.IS_ENABLE_IDLE_TIME_TRACKING,
@@ -32,7 +44,7 @@ export const IDLE_FORM_CFG: ConfigFormSection<IdleConfig> = {
     },
     {
       key: 'minIdleTime',
-      className: HelperClasses.isHideForNoAdvancedFeatures,
+      className: SHOWN_WITH_IDLE_SOURCE,
       type: 'duration',
       hideExpression: '!model.isEnableIdleTimeTracking',
       templateOptions: {
@@ -48,7 +60,7 @@ export const IDLE_FORM_CFG: ConfigFormSection<IdleConfig> = {
     },
     {
       key: 'isOnlyOpenIdleWhenCurrentTask',
-      className: HelperClasses.isHideForNoAdvancedFeatures,
+      className: SHOWN_WITH_IDLE_SOURCE,
       type: 'checkbox',
       hideExpression: '!model.isEnableIdleTimeTracking',
       templateOptions: {
@@ -57,7 +69,7 @@ export const IDLE_FORM_CFG: ConfigFormSection<IdleConfig> = {
     },
     {
       key: 'isSuppressIdleDuringFocusMode',
-      className: HelperClasses.isHideForNoAdvancedFeatures,
+      className: SHOWN_WITH_IDLE_SOURCE,
       type: 'checkbox',
       hideExpression: '!model.isEnableIdleTimeTracking',
       templateOptions: {

@@ -77,3 +77,13 @@ export const flowOsHostOAuthStart = (url: string): Promise<{ ok: true }> =>
 /** Long-poll the loopback result: the redirect's code/state, or an error/timeout. */
 export const flowOsHostOAuthWait = (): Promise<FlowOsOAuthResult> =>
   callHost('oauth/wait');
+
+/**
+ * Milliseconds since the last keyboard or mouse input anywhere on the system,
+ * the same number Electron reads from powerMonitor. Null where the host cannot
+ * tell (then no idle dialog opens, as without the extension).
+ */
+export const flowOsHostIdleMs = async (): Promise<number | null> => {
+  const { idleMs } = await callHost<{ idleMs: number | null }>('idle');
+  return typeof idleMs === 'number' && Number.isFinite(idleMs) ? idleMs : null;
+};
