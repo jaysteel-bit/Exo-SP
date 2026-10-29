@@ -103,6 +103,27 @@ export class FlowOsClient {
     }
   }
 
+  /**
+   * Can this connection read back a diff it just wrote? Row security answers an
+   * unreadable row with an empty list, not an error, so without this check the
+   * panel would wait for a reply it can never see.
+   */
+  async canRead(diffId: number): Promise<boolean> {
+    const cfg = this._getConfig();
+    if (cfg.source === 'none') return false;
+    const url =
+      `${cfg.url}/rest/v1/diffs` +
+      `?client_id=eq.${FLOW_OS_CLIENT_ID}&id=eq.${Math.floor(diffId)}&select=id&limit=1`;
+    const res = await this._request(url, {
+      method: 'GET',
+      headers: this._headers(cfg),
+      timeout: REQUEST_TIMEOUT_MS,
+    }).catch((e: unknown) => {
+      throw new Error(errorText(e));
+    });
+    return Array.isArray(res) && res.length > 0;
+  }
+
   /** Latest diffs of one server-written event for this client, newest first. */
   async latest(event: ReadableEvent, limit: number): Promise<DiffRow[]> {
     const cfg = this._getConfig();

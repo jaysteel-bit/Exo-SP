@@ -54,6 +54,8 @@ const METRIC_PERSIST_DEBOUNCE_MS = 2_000;
 
 export const MSG = {
   NOT_CONNECTED: 'Exo AI: not connected to Flow OS',
+  REPLIES_UNREADABLE:
+    "Exo AI got your request, but this panel can't read its replies yet: Flowstate isn't signed in to Flow OS.",
   HANDOFF_OK: 'Sent to Exo AI — the result will appear in the Exo AI panel.',
   HANDOFF_FAIL: 'Exo AI: could not send the task',
   TASK_NOT_FOUND: 'Exo AI: task not found',
@@ -406,6 +408,12 @@ export class ExoAgent {
     const ev = mapPlanRequested(day, availableMinutes, tasks, await this._projectNames());
     const res = await this.emit(ev);
     if (!res.ok) return { ok: false, error: res.error };
+    // Waiting only makes sense if the reply will be visible. A read that fails
+    // outright says nothing about access, so only a clean empty answer stops here.
+    if (res.id !== null) {
+      const readable = await this._client.canRead(res.id).catch(() => true);
+      if (!readable) return { ok: false, error: MSG.REPLIES_UNREADABLE };
+    }
     this._pendingPlan = { diffId: res.id, requestedAt: now };
     const taskCount = Array.isArray(ev.valueAfter.tasks) ? ev.valueAfter.tasks.length : 0;
     return { ok: true, request: this._pendingPlan, taskCount };

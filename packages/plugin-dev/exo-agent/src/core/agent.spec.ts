@@ -8,7 +8,13 @@ const URL_OK = 'https://jdjyiyeddpfzpgrqffav.supabase.co';
 const T0 = new Date(2026, 9, 26, 9, 0).getTime();
 
 const setup = (
-  opts: { anonKey?: string; tasks?: SpTask[]; stored?: Record<string, string> } = {},
+  opts: {
+    anonKey?: string;
+    tasks?: SpTask[];
+    stored?: Record<string, string>;
+    /** Row security hides what this connection writes (anon key after tenant mapping). */
+    unreadable?: boolean;
+  } = {},
 ) => {
   const clock = { now: T0 };
   const timers: { fn: () => void; ms: number }[] = [];
@@ -16,6 +22,8 @@ const setup = (
   const request = vi.fn<(url: string, options?: unknown) => Promise<unknown>>(
     async (url) => {
       if (url.endsWith('/rpc/emit_diff')) return nextId++;
+      const readBack = /[?&]id=eq\.(\d+)/.exec(url);
+      if (readBack && !opts.unreadable) return [{ id: Number(readBack[1]) }];
       return [];
     },
   );
@@ -314,6 +322,25 @@ describe('ExoAgent', () => {
       isNew: false,
       expired: true,
     });
+  });
+
+  it('plan request says so at once when replies cannot be read, instead of waiting 3 minutes', async () => {
+    h = setup({ unreadable: true });
+    await expect(h.agent.requestPlan(240)).resolves.toEqual({
+      ok: false,
+      error: MSG.REPLIES_UNREADABLE,
+    });
+    expect(h.emitted()[0]).toMatchObject({ event: 'plan=requested' });
+    expect((await h.agent.getPanelState()).pendingPlanRequest).toBeNull();
+  });
+
+  it('plan request still waits when the read-back itself fails', async () => {
+    h.api.request.mockImplementation(async (url: string) => {
+      if (url.endsWith('/rpc/emit_diff')) return 100;
+      if (/[?&]id=eq\./.test(url)) throw new Error('network down');
+      return [];
+    });
+    await expect(h.agent.requestPlan(60)).resolves.toMatchObject({ ok: true });
   });
 
   it('panel state reads the latest plan and 10 handed-off results', async () => {
