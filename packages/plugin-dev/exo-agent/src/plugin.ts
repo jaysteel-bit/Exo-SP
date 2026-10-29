@@ -36,10 +36,27 @@ const host: HostApi = {
   },
 };
 
+// Inside Flowstate the Flow OS host hands out the signed-in user's token
+// (src/app/core/flow-os-host in the fork documents the bridge). Elsewhere there
+// is no host and reads keep the anon key.
+const flowOsAccessToken = async (): Promise<string | null> => {
+  const info = (globalThis as { __FLOW_OS_HOST__?: { token?: string } }).__FLOW_OS_HOST__;
+  if (!info?.token) return null;
+  const res = await fetch('/__host/flow-os-token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-flow-os-host': info.token },
+    body: '{}',
+  });
+  if (!res.ok) return null;
+  const body = (await res.json()) as { token?: unknown };
+  return typeof body.token === 'string' && body.token ? body.token : null;
+};
+
 const agent = new ExoAgent(host, {
   build: { url: __FLOW_OS_SUPABASE_URL__, anonKey: __FLOW_OS_SUPABASE_ANON_KEY__ },
   pluginVersion: __EXO_AGENT_VERSION__,
   initialFocusMode: readInitialFocusMode(),
+  getAccessToken: flowOsAccessToken,
 });
 
 // Hooks. Handlers return quickly: the host awaits each one sequentially.

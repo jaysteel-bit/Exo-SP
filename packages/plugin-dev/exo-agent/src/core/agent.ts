@@ -80,6 +80,11 @@ export interface AgentDeps {
   build: { url: string; anonKey: string };
   pluginVersion: string;
   initialFocusMode: FocusMode | null;
+  /**
+   * The signed-in Flow OS user's token, when the host can give one. Reads use it
+   * instead of the anon key, which row security no longer lets read diffs.
+   */
+  getAccessToken?: () => Promise<string | null>;
   now?: () => number;
   setTimer?: (fn: () => void, ms: number) => unknown;
   clearTimer?: (handle: unknown) => void;
@@ -127,6 +132,7 @@ export class ExoAgent {
       () => resolveConfig(_deps.build, this._override),
       _api.request,
       _deps.pluginVersion,
+      _deps.getAccessToken,
     );
     this._stints = new StintTracker();
     this._focus = new FocusTracker(_deps.initialFocusMode);

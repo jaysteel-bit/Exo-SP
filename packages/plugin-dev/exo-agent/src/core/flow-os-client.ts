@@ -68,6 +68,8 @@ export class FlowOsClient {
     private readonly _getConfig: () => FlowOsConfig,
     private readonly _request: RequestFn,
     private readonly _pluginVersion: string,
+    /** Signed-in user's token from the Flow OS host, used for reads only. */
+    private readonly _getAccessToken?: () => Promise<string | null>,
   ) {}
 
   isConnected(): boolean {
@@ -80,6 +82,18 @@ export class FlowOsClient {
       Authorization: `Bearer ${cfg.anonKey}`,
       'Content-Type': 'application/json',
     };
+  }
+
+  /**
+   * Reads go out as the signed-in Flow OS user when the host can say who that
+   * is, and only on the built-in connection (a custom one is another project).
+   * Emits keep the anon key: emit_diff accepts it and does not need the user.
+   */
+  private async _readHeaders(cfg: FlowOsConfig): Promise<Record<string, string>> {
+    const headers = this._headers(cfg);
+    if (cfg.source !== 'build' || !this._getAccessToken) return headers;
+    const token = await this._getAccessToken().catch(() => null);
+    return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
   }
 
   async emit(ev: DiffEvent): Promise<EmitResult> {
@@ -116,7 +130,7 @@ export class FlowOsClient {
       `?client_id=eq.${FLOW_OS_CLIENT_ID}&id=eq.${Math.floor(diffId)}&select=id&limit=1`;
     const res = await this._request(url, {
       method: 'GET',
-      headers: this._headers(cfg),
+      headers: await this._readHeaders(cfg),
       timeout: REQUEST_TIMEOUT_MS,
     }).catch((e: unknown) => {
       throw new Error(errorText(e));
@@ -137,7 +151,7 @@ export class FlowOsClient {
       `&order=created_at.desc&limit=${Math.max(1, Math.min(50, Math.floor(limit)))}`;
     const res = await this._request(url, {
       method: 'GET',
-      headers: this._headers(cfg),
+      headers: await this._readHeaders(cfg),
       timeout: REQUEST_TIMEOUT_MS,
     }).catch((e: unknown) => {
       throw new Error(errorText(e));

@@ -334,6 +334,34 @@ describe('ExoAgent', () => {
     expect((await h.agent.getPanelState()).pendingPlanRequest).toBeNull();
   });
 
+  it('reads go out as the signed-in user when the host gives a token; emits keep the anon key', async () => {
+    const request = vi.fn(async (url: string) =>
+      url.endsWith('/rpc/emit_diff') ? 100 : [{ id: 100 }],
+    );
+    const agent = new ExoAgent(
+      { ...h.api, request },
+      {
+        build: { url: URL_OK, anonKey: 'anon' },
+        pluginVersion: '1.0.0',
+        initialFocusMode: null,
+        getAccessToken: async () => 'user-jwt',
+      },
+    );
+    await expect(agent.requestPlan(60)).resolves.toMatchObject({ ok: true });
+    await agent.pollPlan();
+    const auth = (call: unknown[]) =>
+      (call[1] as { headers: Record<string, string> }).headers.Authorization;
+    const emits = request.mock.calls.filter(([u]) =>
+      String(u).endsWith('/rpc/emit_diff'),
+    );
+    const reads = request.mock.calls.filter(([u]) =>
+      String(u).includes('/rest/v1/diffs'),
+    );
+    expect(emits.map(auth)).toEqual(['Bearer anon']);
+    expect(reads.length).toBeGreaterThanOrEqual(2);
+    expect(reads.map(auth)).toEqual(reads.map(() => 'Bearer user-jwt'));
+  });
+
   it('plan request still waits when the read-back itself fails', async () => {
     h.api.request.mockImplementation(async (url: string) => {
       if (url.endsWith('/rpc/emit_diff')) return 100;
