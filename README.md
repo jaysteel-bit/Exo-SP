@@ -1,2 +1,2 @@
 # Exo-SP
-Super Productivity Fork for Flow OS
+Super Productivity Fork [https://github.com/super-productivity/super-productivity.git] for Flow OS
